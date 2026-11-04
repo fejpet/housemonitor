@@ -1,17 +1,65 @@
 # HouseMonitor Specification & Requirements
 
 ## Overview
-HouseMonitor is a .NET application designed to fetch structured JSON data from a REST endpoint and display key metrics in a widget/window positioned at the bottom-right corner of the monitor.
+HouseMonitor is a .NET application designed to fetch structured JSON telemetry data from a remote REST endpoint and display key power/energy metrics in a widget positioned at the bottom-right corner of the monitor.
 
 ## Functional & Technical Requirements
 
+### Core & General Requirements
+
 | ID | Category | Requirement Description | Status |
 | :--- | :--- | :--- | :--- |
-| **REQ-001** | Platform | The application shall be implemented as a .NET (`.NET 8.0+`) application. | Planned |
-| **REQ-002** | Data Source | The application shall retrieve telemetry/status data from a configurable REST API endpoint returning a JSON payload. | Planned |
-| **REQ-003** | Data Parsing | The application shall parse and validate the downloaded JSON structure into strongly-typed domain models. | Planned |
-| **REQ-004** | UI Placement | The application shall display the retrieved data in a window/overlay positioned in the bottom-right corner of the monitor. | Planned |
-| **REQ-005** | UI Display | The application shall render selected data fields from the JSON payload in a compact, readable layout. | Planned |
+| **REQ-001** | Platform | The application shall be implemented as a .NET (`.NET 8.0+`) application. | Completed |
+| **REQ-004** | UI Placement | The application shall display the retrieved data in a window/overlay positioned in the bottom-right corner of the monitor. | In Progress |
+| **REQ-005** | UI Display | The application shall render selected data fields from the JSON payload in a compact, readable layout. | Completed |
 | **REQ-006** | Documentation & Language | All project documentation, source code, identifiers, comments, and tests shall be written in English. | Active |
 | **REQ-007** | Development Methodology | All new requirements and features shall be developed using an agentic workflow following strict Test-Driven Development (TDD). | Active |
 
+### REST Client & Secret Configuration Requirements
+
+| ID | Category | Requirement Description | Status |
+| :--- | :--- | :--- | :--- |
+| **REQ-002** | REST Client | The REST client shall fetch telemetry data via an HTTP `GET` request from the endpoint URL configured in `secret.json`. | Completed |
+| **REQ-008** | Authentication | The REST client shall authenticate requests by sending the `X-Auth-Key` HTTP request header containing the configured secret API key. | Completed |
+| **REQ-009** | Secret Storage | Both the REST endpoint URL and the secret API key shall be stored exclusively in a local `secret.json` file that is excluded from version control via `.gitignore`. Neither the real endpoint URL nor the secret API key may appear in any tracked repository file. | Completed |
+| **REQ-010** | Secret Template | A `secret.example.json` file shall be tracked in the repository, containing the exact configuration structure with placeholder values (`<YOUR_ENDPOINT_URL>`, `<YOUR_SECRET_API_KEY>`) instead of actual secrets. | Completed |
+
+### Domain Model & JSON Deserialization Requirements
+
+| ID | Category | Requirement Description | Status |
+| :--- | :--- | :--- | :--- |
+| **REQ-003** | Root Domain Model | The application shall deserialize the root JSON payload into a strongly-typed `PowerStatus` domain object containing `battery`, `generator`, `solar`, and `house` sections. | Completed |
+| **REQ-011** | Battery Domain Model | The `battery` JSON object shall map to a `BatteryStatus` model with properties: `Soc` (`double`, mapped from `"soc"`, representing state of charge in %) and `State` (`string`, mapped from `"state"`, e.g., `"discharging"`). | Completed |
+| **REQ-012** | Generator Domain Model | The `generator` JSON object shall map to a `GeneratorStatus` model with properties: `State` (`string`, mapped from `"state"`, e.g., `"stopped"`) and `Today` (`double`, mapped from `"today"`). | Completed |
+| **REQ-013** | Solar Domain Model | The `solar` JSON object shall map to a `SolarStatus` model with properties: `Production` (`double`, mapped from `"production"`) and `Today` (`double`, mapped from `"today"`). | Completed |
+| **REQ-014** | House Consumption Domain Model | The `house` JSON object shall map to a `HouseStatus` model with properties: `Consumption` (`double`, mapped from `"consumption"`) and `TodayConsumption` (`double`, mapped from the exact JSON property `"today_consumtion"`). | Completed |
+
+## Reference API Specification
+
+### Request
+```bash
+curl -X GET <YOUR_ENDPOINT_URL> \
+  -H "X-Auth-Key: <YOUR_SECRET_API_KEY>"
+```
+
+### Sample JSON Response
+```json
+{
+  "battery": {
+    "soc": 69.0,
+    "state": "discharging"
+  },
+  "generator": {
+    "state": "stopped",
+    "today": 0
+  },
+  "solar": {
+    "production": 0.0,
+    "today": 17.98
+  },
+  "house": {
+    "consumption": 414.0,
+    "today_consumtion": 12.84
+  }
+}
+```
