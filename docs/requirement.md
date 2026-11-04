@@ -26,11 +26,12 @@ HouseMonitor is a .NET application designed to fetch structured JSON telemetry d
 
 | ID | Category | Requirement Description | Status |
 | :--- | :--- | :--- | :--- |
-| **REQ-003** | Root Domain Model | The application shall deserialize the root JSON payload into a strongly-typed `PowerStatus` domain object containing `battery`, `generator`, `solar`, and `house` sections. | Completed |
+| **REQ-003** | Root Domain Model | The application shall deserialize the root JSON payload into a strongly-typed `PowerStatus` domain object containing `battery`, `generator`, `solar`, `house`, and `timestamp` fields. | Completed |
 | **REQ-011** | Battery Domain Model | The `battery` JSON object shall map to a `BatteryStatus` model with properties: `Soc` (`double`, mapped from `"soc"`, representing state of charge in %) and `State` (`string`, mapped from `"state"`, e.g., `"discharging"`). | Completed |
 | **REQ-012** | Generator Domain Model | The `generator` JSON object shall map to a `GeneratorStatus` model with properties: `State` (`string`, mapped from `"state"`, e.g., `"stopped"`) and `Today` (`double`, mapped from `"today"`). | Completed |
 | **REQ-013** | Solar Domain Model | The `solar` JSON object shall map to a `SolarStatus` model with properties: `Production` (`double`, mapped from `"production"`) and `Today` (`double`, mapped from `"today"`). | Completed |
 | **REQ-014** | House Consumption Domain Model | The `house` JSON object shall map to a `HouseStatus` model with properties: `Consumption` (`double`, mapped from `"consumption"`) and `TodayConsumption` (`double`, mapped from the exact JSON property `"today_consumtion"`). | Completed |
+| **REQ-019** | Telemetry Timestamp | The root `"timestamp"` JSON property (in ISO 8601 format, e.g., `"2026-11-04T22:20:35.014353+01:00"`) shall map to a `DateTimeOffset Timestamp` property on `PowerStatus` representing the data generation time, and shall be exposed by the ViewModel as the telemetry timestamp. | Completed |
 
 ### Graphical Desktop Overlay & Scheduled Refresh Requirements
 
@@ -55,7 +56,7 @@ curl -X GET <YOUR_ENDPOINT_URL> \
 ```json
 {
   "battery": {
-    "soc": 69.0,
+    "soc": 65.0,
     "state": "discharging"
   },
   "generator": {
@@ -67,8 +68,9 @@ curl -X GET <YOUR_ENDPOINT_URL> \
     "today": 17.98
   },
   "house": {
-    "consumption": 414.0,
-    "today_consumtion": 12.84
-  }
+    "consumption": 415.0,
+    "today_consumtion": 13.38
+  },
+  "timestamp": "2026-11-04T22:20:35.014353+01:00"
 }
 ```

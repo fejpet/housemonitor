@@ -1,3 +1,4 @@
+using System.Globalization;
 using HouseMonitor.Core.Clients;
 using HouseMonitor.Core.Models;
 using HouseMonitor.Core.Presentation;
@@ -10,14 +11,16 @@ public class PowerStatusPollingServiceTests
     private static readonly PowerStatus InitialStatus = new(
         new BatteryStatus(65.0, "discharging"),
         new GeneratorStatus("stopped", 0.0),
-        new SolarStatus(120.0, 10.5),
-        new HouseStatus(350.0, 8.2));
+        new SolarStatus(0.0, 17.98),
+        new HouseStatus(415.0, 13.38),
+        DateTimeOffset.Parse("2026-11-04T22:20:35.014353+01:00", CultureInfo.InvariantCulture));
 
     private static readonly PowerStatus UpdatedStatus = new(
         new BatteryStatus(72.5, "charging"),
         new GeneratorStatus("stopped", 0.0),
-        new SolarStatus(850.0, 12.1),
-        new HouseStatus(310.0, 8.9));
+        new SolarStatus(850.0, 18.1),
+        new HouseStatus(310.0, 13.5),
+        DateTimeOffset.Parse("2026-11-04T22:20:45.014353+01:00", CultureInfo.InvariantCulture));
 
     [Fact]
     public async Task RunAsync_PollsImmediatelyAndOnEachScheduledIntervalUntilCancelled()
@@ -100,4 +103,3 @@ public class PowerStatusPollingServiceTests
             => callback();
     }
 }
-

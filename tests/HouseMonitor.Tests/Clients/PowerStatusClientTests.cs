@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Net;
 using System.Text;
 using HouseMonitor.Core.Clients;
@@ -9,10 +10,11 @@ public class PowerStatusClientTests
 {
     private const string SampleResponseJson = """
         {
-          "battery": { "soc": 69.0, "state": "discharging" },
+          "battery": { "soc": 65.0, "state": "discharging" },
           "generator": { "state": "stopped", "today": 0 },
           "solar": { "production": 0.0, "today": 17.98 },
-          "house": { "consumption": 414.0, "today_consumtion": 12.84 }
+          "house": { "consumption": 415.0, "today_consumtion": 13.38 },
+          "timestamp": "2026-11-04T22:20:35.014353+01:00"
         }
         """;
 
@@ -52,15 +54,18 @@ public class PowerStatusClientTests
         Assert.True(capturedRequest.Headers.TryGetValues("X-Auth-Key", out var headerValues));
         Assert.Equal("test-secret-api-key", Assert.Single(headerValues));
 
-        // Assert - Parsed Domain Model (REQ-003, REQ-011..REQ-014)
-        Assert.Equal(69.0, result.Battery.Soc);
+        // Assert - Parsed Domain Model (REQ-003, REQ-011..REQ-014, REQ-019)
+        Assert.Equal(65.0, result.Battery.Soc);
         Assert.Equal("discharging", result.Battery.State);
         Assert.Equal("stopped", result.Generator.State);
         Assert.Equal(0.0, result.Generator.Today);
         Assert.Equal(0.0, result.Solar.Production);
         Assert.Equal(17.98, result.Solar.Today);
-        Assert.Equal(414.0, result.House.Consumption);
-        Assert.Equal(12.84, result.House.TodayConsumption);
+        Assert.Equal(415.0, result.House.Consumption);
+        Assert.Equal(13.38, result.House.TodayConsumption);
+        Assert.Equal(
+            DateTimeOffset.Parse("2026-11-04T22:20:35.014353+01:00", CultureInfo.InvariantCulture),
+            result.Timestamp);
     }
 
     [Fact]

@@ -7,12 +7,11 @@ using HouseMonitor.Core.Models;
 namespace HouseMonitor.Core.Presentation;
 
 /// <summary>
-/// Observable ViewModel for the bottom-right desktop overlay window (REQ-005, REQ-015, REQ-016, REQ-017).
+/// Observable ViewModel for the bottom-right desktop overlay window (REQ-005, REQ-015, REQ-016, REQ-017, REQ-019).
 /// </summary>
 public sealed class OverlayViewModel : INotifyPropertyChanged
 {
     private readonly IPowerStatusClient _client;
-    private readonly Func<DateTimeOffset> _clock;
 
     private PowerStatus? _currentStatus;
     private IReadOnlyList<string> _summaryLines = [];
@@ -24,11 +23,10 @@ public sealed class OverlayViewModel : INotifyPropertyChanged
     private bool _hasError;
     private DateTimeOffset? _lastUpdated;
 
-    public OverlayViewModel(IPowerStatusClient client, Func<DateTimeOffset>? clock = null)
+    public OverlayViewModel(IPowerStatusClient client)
     {
         ArgumentNullException.ThrowIfNull(client);
         _client = client;
-        _clock = clock ?? (() => DateTimeOffset.Now);
     }
 
     public event PropertyChangedEventHandler? PropertyChanged;
@@ -88,7 +86,7 @@ public sealed class OverlayViewModel : INotifyPropertyChanged
     }
 
     /// <summary>
-    /// Fetches the latest telemetry from the REST endpoint and updates observable properties (REQ-016, REQ-017).
+    /// Fetches the latest telemetry from the REST endpoint and updates observable properties (REQ-016, REQ-017, REQ-019).
     /// </summary>
     public async Task RefreshOnceAsync(CancellationToken cancellationToken = default)
     {
@@ -96,7 +94,7 @@ public sealed class OverlayViewModel : INotifyPropertyChanged
         {
             var status = await _client.GetPowerStatusAsync(cancellationToken).ConfigureAwait(false);
             var lines = StatusDisplayFormatter.FormatSummaryLines(status);
-            var timestamp = _clock();
+            var timestamp = status.Timestamp;
 
             CurrentStatus = status;
             SummaryLines = lines;
@@ -106,7 +104,7 @@ public sealed class OverlayViewModel : INotifyPropertyChanged
             GeneratorText = lines[3];
             LastUpdated = timestamp;
             HasError = false;
-            StatusMessage = string.Create(CultureInfo.InvariantCulture, $"Updated {timestamp:HH:mm:ss}");
+            StatusMessage = string.Create(CultureInfo.InvariantCulture, $"Timestamp: {timestamp:yyyy-MM-dd HH:mm:ss}");
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
@@ -130,4 +128,3 @@ public sealed class OverlayViewModel : INotifyPropertyChanged
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
     }
 }
-

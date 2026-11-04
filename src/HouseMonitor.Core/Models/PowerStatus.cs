@@ -4,13 +4,14 @@ using System.Text.Json.Serialization;
 namespace HouseMonitor.Core.Models;
 
 /// <summary>
-/// Root domain object representing the power telemetry payload (REQ-003).
+/// Root domain object representing the power telemetry payload (REQ-003, REQ-019).
 /// </summary>
 public sealed record PowerStatus(
     [property: JsonPropertyName("battery")] BatteryStatus Battery,
     [property: JsonPropertyName("generator")] GeneratorStatus Generator,
     [property: JsonPropertyName("solar")] SolarStatus Solar,
-    [property: JsonPropertyName("house")] HouseStatus House)
+    [property: JsonPropertyName("house")] HouseStatus House,
+    [property: JsonPropertyName("timestamp")] DateTimeOffset Timestamp)
 {
     private static readonly JsonSerializerOptions SerializerOptions = new()
     {
@@ -18,7 +19,7 @@ public sealed record PowerStatus(
     };
 
     /// <summary>
-    /// Deserializes and validates a JSON string into a <see cref="PowerStatus"/> instance (REQ-003).
+    /// Deserializes and validates a JSON string into a <see cref="PowerStatus"/> instance (REQ-003, REQ-019).
     /// </summary>
     public static PowerStatus FromJson(string json)
     {
@@ -29,9 +30,10 @@ public sealed record PowerStatus(
             status.Battery is null ||
             status.Generator is null ||
             status.Solar is null ||
-            status.House is null)
+            status.House is null ||
+            status.Timestamp == default)
         {
-            throw new JsonException("Deserialized PowerStatus payload is missing required sections.");
+            throw new JsonException("Deserialized PowerStatus payload is missing required sections or timestamp.");
         }
 
         return status;
@@ -66,4 +68,3 @@ public sealed record SolarStatus(
 public sealed record HouseStatus(
     [property: JsonPropertyName("consumption")] double Consumption,
     [property: JsonPropertyName("today_consumtion")] double TodayConsumption);
-
