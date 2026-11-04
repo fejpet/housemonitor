@@ -11,13 +11,14 @@ public sealed class SecretConfiguration
 }
 
 /// <summary>
-/// Settings required to authenticate and query the REST endpoint (REQ-002, REQ-008, REQ-009).
+/// Settings required to authenticate and query the REST endpoint (REQ-002, REQ-008, REQ-009, REQ-016).
 /// </summary>
 public sealed class ApiSettings
 {
     public string EndpointUrl { get; init; } = string.Empty;
     public string AuthHeaderName { get; init; } = "X-Auth-Key";
     public string AuthKey { get; init; } = string.Empty;
+    public int RefreshIntervalSeconds { get; init; } = 10;
 }
 
 /// <summary>
@@ -84,6 +85,12 @@ public static class SecretConfigurationLoader
         {
             throw new InvalidOperationException(
                 "A valid secret AuthKey must be configured in secret.json (placeholder value detected).");
+        }
+
+        if (settings.RefreshIntervalSeconds <= 0)
+        {
+            throw new InvalidOperationException(
+                "RefreshIntervalSeconds must be a positive integer.");
         }
 
         return settings;

@@ -26,6 +26,50 @@ public class SecretConfigurationLoaderTests
         Assert.Equal("https://api.example.test/power/battery", settings.EndpointUrl);
         Assert.Equal("X-Auth-Key", settings.AuthHeaderName);
         Assert.Equal("test-secret-api-key", settings.AuthKey);
+        Assert.Equal(10, settings.RefreshIntervalSeconds);
+    }
+
+    [Fact]
+    public void LoadFromJson_CustomRefreshInterval_ReturnsConfiguredInterval()
+    {
+        // Arrange (REQ-016)
+        const string json = """
+            {
+              "ApiSettings": {
+                "EndpointUrl": "https://api.example.test/power/battery",
+                "AuthHeaderName": "X-Auth-Key",
+                "AuthKey": "test-secret-api-key",
+                "RefreshIntervalSeconds": 30
+              }
+            }
+            """;
+
+        // Act
+        var settings = SecretConfigurationLoader.LoadFromJson(json);
+
+        // Assert
+        Assert.Equal(30, settings.RefreshIntervalSeconds);
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(-5)]
+    public void LoadFromJson_InvalidRefreshInterval_ThrowsInvalidOperationException(int invalidSeconds)
+    {
+        // Arrange (REQ-016)
+        var json = $$"""
+            {
+              "ApiSettings": {
+                "EndpointUrl": "https://api.example.test/power/battery",
+                "AuthHeaderName": "X-Auth-Key",
+                "AuthKey": "test-secret-api-key",
+                "RefreshIntervalSeconds": {{invalidSeconds}}
+              }
+            }
+            """;
+
+        // Act & Assert
+        Assert.Throws<InvalidOperationException>(() => SecretConfigurationLoader.LoadFromJson(json));
     }
 
     [Fact]

@@ -1,0 +1,103 @@
+using HouseMonitor.Core.Clients;
+using HouseMonitor.Core.Models;
+using HouseMonitor.Core.Presentation;
+using HouseMonitor.Core.Services;
+
+namespace HouseMonitor.Tests.Services;
+
+public class PowerStatusPollingServiceTests
+{
+    private static readonly PowerStatus InitialStatus = new(
+        new BatteryStatus(65.0, "discharging"),
+        new GeneratorStatus("stopped", 0.0),
+        new SolarStatus(120.0, 10.5),
+        new HouseStatus(350.0, 8.2));
+
+    private static readonly PowerStatus UpdatedStatus = new(
+        new BatteryStatus(72.5, "charging"),
+        new GeneratorStatus("stopped", 0.0),
+        new SolarStatus(850.0, 12.1),
+        new HouseStatus(310.0, 8.9));
+
+    [Fact]
+    public async Task RunAsync_PollsImmediatelyAndOnEachScheduledIntervalUntilCancelled()
+    {
+        // Arrange (REQ-016)
+        var callCount = 0;
+        using var cts = new CancellationTokenSource();
+
+        var stubClient = new CallbackPowerStatusClient(() =>
+        {
+            callCount++;
+            return Task.FromResult(callCount == 1 ? InitialStatus : UpdatedStatus);
+        });
+
+        var viewModel = new OverlayViewModel(stubClient);
+        var delayIntervals = new List<TimeSpan>();
+
+        var service = new PowerStatusPollingService(
+            viewModel,
+            TimeSpan.FromSeconds(10),
+            delayAsync: (interval, token) =>
+            {
+                delayIntervals.Add(interval);
+                if (delayIntervals.Count >= 2)
+                {
+                    cts.Cancel();
+                    token.ThrowIfCancellationRequested();
+                }
+
+                return Task.CompletedTask;
+            });
+
+        // Act
+        await service.RunAsync(cts.Token);
+
+        // Assert
+        Assert.Equal(2, callCount);
+        Assert.All(delayIntervals, i => Assert.Equal(TimeSpan.FromSeconds(10), i));
+        Assert.Same(UpdatedStatus, viewModel.CurrentStatus);
+        Assert.Contains("72.5", viewModel.BatteryText);
+    }
+
+    [Fact]
+    public async Task RunAsync_WhenFetchThrows_ContinuesPollingNextIntervals()
+    {
+        // Arrange (REQ-017)
+        var callCount = 0;
+        using var cts = new CancellationTokenSource();
+
+        var stubClient = new CallbackPowerStatusClient(() =>
+        {
+            callCount++;
+            if (callCount == 1)
+            {
+                throw new HttpRequestException("Temporary network failure");
+            }
+
+            cts.Cancel();
+            return Task.FromResult(UpdatedStatus);
+        });
+
+        var viewModel = new OverlayViewModel(stubClient);
+        var service = new PowerStatusPollingService(
+            viewModel,
+            TimeSpan.FromSeconds(5),
+            delayAsync: (_, _) => Task.CompletedTask);
+
+        // Act
+        await service.RunAsync(cts.Token);
+
+        // Assert
+        Assert.Equal(2, callCount);
+        Assert.False(viewModel.HasError);
+        Assert.Same(UpdatedStatus, viewModel.CurrentStatus);
+    }
+
+    private sealed class CallbackPowerStatusClient(Func<Task<PowerStatus>> callback) : IPowerStatusClient
+    {
+        public Task<PowerStatus> GetPowerStatusAsync(CancellationToken cancellationToken = default)
+            => callback();
+    }
+}
+

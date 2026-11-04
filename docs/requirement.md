@@ -1,7 +1,7 @@
 # HouseMonitor Specification & Requirements
 
 ## Overview
-HouseMonitor is a .NET application designed to fetch structured JSON telemetry data from a remote REST endpoint and display key power/energy metrics in a widget positioned at the bottom-right corner of the monitor.
+HouseMonitor is a .NET application designed to fetch structured JSON telemetry data from a remote REST endpoint and display key power/energy metrics in a desktop overlay widget positioned at the bottom-right corner of the monitor.
 
 ## Functional & Technical Requirements
 
@@ -10,8 +10,6 @@ HouseMonitor is a .NET application designed to fetch structured JSON telemetry d
 | ID | Category | Requirement Description | Status |
 | :--- | :--- | :--- | :--- |
 | **REQ-001** | Platform | The application shall be implemented as a .NET (`.NET 8.0+`) application. | Completed |
-| **REQ-004** | UI Placement | The application shall display the retrieved data in a window/overlay positioned in the bottom-right corner of the monitor. | In Progress |
-| **REQ-005** | UI Display | The application shall render selected data fields from the JSON payload in a compact, readable layout. | Completed |
 | **REQ-006** | Documentation & Language | All project documentation, source code, identifiers, comments, and tests shall be written in English. | Active |
 | **REQ-007** | Development Methodology | All new requirements and features shall be developed using an agentic workflow following strict Test-Driven Development (TDD). | Active |
 
@@ -33,6 +31,17 @@ HouseMonitor is a .NET application designed to fetch structured JSON telemetry d
 | **REQ-012** | Generator Domain Model | The `generator` JSON object shall map to a `GeneratorStatus` model with properties: `State` (`string`, mapped from `"state"`, e.g., `"stopped"`) and `Today` (`double`, mapped from `"today"`). | Completed |
 | **REQ-013** | Solar Domain Model | The `solar` JSON object shall map to a `SolarStatus` model with properties: `Production` (`double`, mapped from `"production"`) and `Today` (`double`, mapped from `"today"`). | Completed |
 | **REQ-014** | House Consumption Domain Model | The `house` JSON object shall map to a `HouseStatus` model with properties: `Consumption` (`double`, mapped from `"consumption"`) and `TodayConsumption` (`double`, mapped from the exact JSON property `"today_consumtion"`). | Completed |
+
+### Graphical Desktop Overlay & Scheduled Refresh Requirements
+
+| ID | Category | Requirement Description | Status |
+| :--- | :--- | :--- | :--- |
+| **REQ-004** | UI Placement | The application shall display the retrieved data in a window/overlay positioned in the bottom-right corner of the primary monitor's working area. | Completed |
+| **REQ-005** | UI Display | The application shall render selected data fields from the JSON payload (`Battery`, `Solar`, `House`, `Generator`) along with update status in a compact, readable layout. | Completed |
+| **REQ-015** | Graphical UI Framework | The desktop overlay window shall be implemented using the cross-platform Avalonia UI framework in `HouseMonitor.App`, bound to an observable `OverlayViewModel` in `HouseMonitor.Core`. | Completed |
+| **REQ-016** | Scheduled Refresh | The application shall automatically and periodically fetch updated telemetry from the REST endpoint at a configurable interval (`RefreshIntervalSeconds` in `ApiSettings`, defaulting to `10` seconds) and notify the UI on each update. | Completed |
+| **REQ-017** | Resilient Polling & Error State | When a refresh attempt fails (e.g., network or HTTP error), the polling service and ViewModel shall capture the error state without crashing, retain the last known valid telemetry values if present, and continue subsequent scheduled refreshes. | Completed |
+| **REQ-018** | Overlay Window Styling | The desktop window shall be borderless or compactly framed, always-on-top (`Topmost = true`), non-resizable, and positioned at the bottom-right screen coordinates calculated by `OverlayPositionCalculator`. | Completed |
 
 ## Reference API Specification
 

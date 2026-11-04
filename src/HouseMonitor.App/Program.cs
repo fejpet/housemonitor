@@ -1,25 +1,40 @@
+using Avalonia;
 using HouseMonitor.Core.Clients;
 using HouseMonitor.Core.Configuration;
 using HouseMonitor.Core.Presentation;
 
-var secretPath = SecretConfigurationLoader.ResolveSecretFilePath();
-var settings = await SecretConfigurationLoader.LoadFromFileAsync(secretPath);
+namespace HouseMonitor.App;
 
-using var httpClient = new HttpClient();
-var client = new PowerStatusClient(httpClient, settings);
-
-var status = await client.GetPowerStatusAsync();
-var lines = StatusDisplayFormatter.FormatSummaryLines(status);
-var position = OverlayPositionCalculator.CalculateBottomRight(
-    screenWidth: 1920,
-    screenHeight: 1080,
-    windowWidth: 320,
-    windowHeight: 140);
-
-Console.WriteLine($"[HouseMonitor Overlay @ Bottom-Right ({position.X}, {position.Y})]");
-Console.WriteLine(new string('-', 52));
-foreach (var line in lines)
+internal static class Program
 {
-    Console.WriteLine(line);
+    [STAThread]
+    public static async Task<int> Main(string[] args)
+    {
+        if (args.Contains("--console", StringComparer.OrdinalIgnoreCase))
+        {
+            var secretPath = SecretConfigurationLoader.ResolveSecretFilePath();
+            var settings = await SecretConfigurationLoader.LoadFromFileAsync(secretPath);
+
+            using var httpClient = new HttpClient();
+            var client = new PowerStatusClient(httpClient, settings);
+            var viewModel = new OverlayViewModel(client);
+            await viewModel.RefreshOnceAsync();
+
+            foreach (var line in viewModel.SummaryLines)
+            {
+                Console.WriteLine(line);
+            }
+
+            Console.WriteLine(viewModel.StatusMessage);
+            return viewModel.HasError ? 1 : 0;
+        }
+
+        return BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);
+    }
+
+    public static AppBuilder BuildAvaloniaApp()
+        => AppBuilder.Configure<App>()
+            .UsePlatformDetect()
+            .WithInterFont()
+            .LogToTrace();
 }
-Console.WriteLine(new string('-', 52));
