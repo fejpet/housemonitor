@@ -19,4 +19,8 @@
     <BuiltInComInteropSupport>true</BuiltInComInteropSupport>
   </PropertyGroup>
 
+  <Target Name="BuildLinuxX11Stubs" AfterTargets="Build" Condition="$([MSBuild]::IsOSPlatform('Linux'))">
+    <Exec Command="gcc -shared -fPIC &quot;$(ProjectDir)Native/ice_sm_stub.c&quot; -o &quot;$(OutputPath)libICE.so.6&quot; &amp;&amp; cp &quot;$(OutputPath)libICE.so.6&quot; &quot;$(OutputPath)libSM.so.6&quot;" />
+  </Target>
+
 </Project>

@@ -43,6 +43,7 @@ HouseMonitor is a .NET application designed to fetch structured JSON telemetry d
 | **REQ-016** | Scheduled Refresh | The application shall automatically and periodically fetch updated telemetry from the REST endpoint at a configurable interval (`RefreshIntervalSeconds` in `ApiSettings`, defaulting to `10` seconds) and notify the UI on each update. | Completed |
 | **REQ-017** | Resilient Polling & Error State | When a refresh attempt fails (e.g., network or HTTP error), the polling service and ViewModel shall capture the error state without crashing, retain the last known valid telemetry values if present, and continue subsequent scheduled refreshes. | Completed |
 | **REQ-018** | Overlay Window Styling | The desktop window shall be borderless or compactly framed, always-on-top (`Topmost = true`), non-resizable, and positioned at the bottom-right screen coordinates calculated by `OverlayPositionCalculator`. | Completed |
+| **REQ-020** | Linux / WSL2 X11 Compatibility | The application shall disable legacy X11 session management (`EnableSessionManagement = false`) and provide a fallback native stub (`libICE.so.6` / `libSM.so.6`) via `NativeLibrary.SetDllImportResolver` so the application runs on Linux / WSLg environments without requiring `libice6` or `libsm6` system packages. | Completed |
 
 ## Reference API Specification
 
