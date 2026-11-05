@@ -1,13 +1,15 @@
 using System.Text.Json;
+using HouseMonitor.Core.Logging;
 
 namespace HouseMonitor.Core.Configuration;
 
 /// <summary>
-/// Root wrapper for the secret.json configuration file (REQ-009).
+/// Root wrapper for the secret.json configuration file (REQ-009, REQ-022).
 /// </summary>
 public sealed class SecretConfiguration
 {
     public ApiSettings? ApiSettings { get; init; }
+    public LoggingSettings? LoggingSettings { get; init; }
 }
 
 /// <summary>
@@ -22,7 +24,39 @@ public sealed class ApiSettings
 }
 
 /// <summary>
-/// Loads and validates API secret configuration from secret.json (REQ-009, REQ-010).
+/// Settings controlling log severity level and output sinks (REQ-021, REQ-022).
+/// </summary>
+public sealed class LoggingSettings
+{
+    public const string DefaultLogFilePath = "logs/housemonitor.log";
+
+    public string Level { get; init; } = "INFO";
+    public bool EnableConsole { get; init; } = true;
+    public bool EnableFile { get; init; } = false;
+    public string FilePath { get; init; } = DefaultLogFilePath;
+
+    public LogLevel GetParsedLogLevel() => ParseLogLevel(Level);
+
+    public static LogLevel ParseLogLevel(string? levelText)
+    {
+        if (string.IsNullOrWhiteSpace(levelText))
+        {
+            throw new InvalidOperationException("Log level must not be empty. Supported values: DEBUG, INFO, ERROR.");
+        }
+
+        return levelText.Trim().ToUpperInvariant() switch
+        {
+            "DEBUG" => LogLevel.Debug,
+            "INFO" or "INFORMATION" => LogLevel.Info,
+            "ERROR" => LogLevel.Error,
+            _ => throw new InvalidOperationException(
+                $"Unsupported log level '{levelText}'. Supported values: DEBUG, INFO, ERROR.")
+        };
+    }
+}
+
+/// <summary>
+/// Loads and validates API secret and logging configuration from secret.json (REQ-009, REQ-010, REQ-021, REQ-022).
 /// </summary>
 public static class SecretConfigurationLoader
 {
@@ -51,48 +85,95 @@ public static class SecretConfigurationLoader
         string filePath,
         CancellationToken cancellationToken = default)
     {
+        var config = await LoadConfigurationFromFileAsync(filePath, logger: null, cancellationToken).ConfigureAwait(false);
+        return config.ApiSettings!;
+    }
+
+    public static async Task<SecretConfiguration> LoadConfigurationFromFileAsync(
+        string filePath,
+        IAppLogger? logger = null,
+        CancellationToken cancellationToken = default)
+    {
+        var activeLogger = logger ?? NullAppLogger.Instance;
+        activeLogger.LogDebug(nameof(SecretConfigurationLoader), $"Reading configuration file from '{filePath}'.");
+
         if (!File.Exists(filePath))
         {
-            throw new FileNotFoundException($"Secret configuration file was not found at '{filePath}'.", filePath);
+            var ex = new FileNotFoundException($"Secret configuration file was not found at '{filePath}'.", filePath);
+            activeLogger.LogError(nameof(SecretConfigurationLoader), $"Configuration file not found at '{filePath}'.", ex);
+            throw ex;
         }
 
         var json = await File.ReadAllTextAsync(filePath, cancellationToken).ConfigureAwait(false);
-        return LoadFromJson(json);
+        return LoadConfigurationFromJson(json, activeLogger);
     }
 
     public static ApiSettings LoadFromJson(string json)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(json);
+        var config = LoadConfigurationFromJson(json);
+        return config.ApiSettings!;
+    }
 
-        var config = JsonSerializer.Deserialize<SecretConfiguration>(json);
-        var settings = config?.ApiSettings
-            ?? throw new InvalidOperationException("Missing 'ApiSettings' section in secret configuration.");
+    public static SecretConfiguration LoadConfigurationFromJson(string json, IAppLogger? logger = null)
+    {
+        var activeLogger = logger ?? NullAppLogger.Instance;
 
-        if (string.IsNullOrWhiteSpace(settings.EndpointUrl) ||
-            string.Equals(settings.EndpointUrl, PlaceholderEndpointUrl, StringComparison.Ordinal))
+        try
         {
-            throw new InvalidOperationException(
-                "A valid EndpointUrl must be configured in secret.json.");
-        }
+            ArgumentException.ThrowIfNullOrWhiteSpace(json);
 
-        if (string.IsNullOrWhiteSpace(settings.AuthHeaderName))
+            var config = JsonSerializer.Deserialize<SecretConfiguration>(json);
+            var settings = config?.ApiSettings
+                ?? throw new InvalidOperationException("Missing 'ApiSettings' section in secret configuration.");
+
+            if (string.IsNullOrWhiteSpace(settings.EndpointUrl) ||
+                string.Equals(settings.EndpointUrl, PlaceholderEndpointUrl, StringComparison.Ordinal))
+            {
+                throw new InvalidOperationException(
+                    "A valid EndpointUrl must be configured in secret.json.");
+            }
+
+            if (string.IsNullOrWhiteSpace(settings.AuthHeaderName))
+            {
+                throw new InvalidOperationException("AuthHeaderName must be configured in ApiSettings.");
+            }
+
+            if (string.IsNullOrWhiteSpace(settings.AuthKey) ||
+                string.Equals(settings.AuthKey, PlaceholderKey, StringComparison.Ordinal))
+            {
+                throw new InvalidOperationException(
+                    "A valid secret AuthKey must be configured in secret.json (placeholder value detected).");
+            }
+
+            if (settings.RefreshIntervalSeconds <= 0)
+            {
+                throw new InvalidOperationException(
+                    "RefreshIntervalSeconds must be a positive integer.");
+            }
+
+            var loggingSettings = config?.LoggingSettings ?? new LoggingSettings();
+            _ = loggingSettings.GetParsedLogLevel();
+
+            if (loggingSettings.EnableFile && string.IsNullOrWhiteSpace(loggingSettings.FilePath))
+            {
+                throw new InvalidOperationException(
+                    "A non-empty FilePath must be configured in LoggingSettings when EnableFile is true.");
+            }
+
+            activeLogger.LogInfo(
+                nameof(SecretConfigurationLoader),
+                $"Configuration validated successfully (EndpointUrl='{settings.EndpointUrl}', RefreshIntervalSeconds={settings.RefreshIntervalSeconds}, LogLevel={loggingSettings.GetParsedLogLevel()}).");
+
+            return new SecretConfiguration
+            {
+                ApiSettings = settings,
+                LoggingSettings = loggingSettings
+            };
+        }
+        catch (Exception ex)
         {
-            throw new InvalidOperationException("AuthHeaderName must be configured in ApiSettings.");
+            activeLogger.LogError(nameof(SecretConfigurationLoader), $"Configuration validation failed: {ex.Message}", ex);
+            throw;
         }
-
-        if (string.IsNullOrWhiteSpace(settings.AuthKey) ||
-            string.Equals(settings.AuthKey, PlaceholderKey, StringComparison.Ordinal))
-        {
-            throw new InvalidOperationException(
-                "A valid secret AuthKey must be configured in secret.json (placeholder value detected).");
-        }
-
-        if (settings.RefreshIntervalSeconds <= 0)
-        {
-            throw new InvalidOperationException(
-                "RefreshIntervalSeconds must be a positive integer.");
-        }
-
-        return settings;
     }
 }

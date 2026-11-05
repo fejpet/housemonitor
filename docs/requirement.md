@@ -45,6 +45,14 @@ HouseMonitor is a .NET application designed to fetch structured JSON telemetry d
 | **REQ-018** | Overlay Window Styling | The desktop window shall be borderless or compactly framed, always-on-top (`Topmost = true`), non-resizable, and positioned at the bottom-right screen coordinates calculated by `OverlayPositionCalculator`. | Completed |
 | **REQ-020** | Linux / WSL2 X11 Compatibility | The application shall disable legacy X11 session management (`EnableSessionManagement = false`) and provide a fallback native stub (`libICE.so.6` / `libSM.so.6`) via `NativeLibrary.SetDllImportResolver` so the application runs on Linux / WSLg environments without requiring `libice6` or `libsm6` system packages. | Completed |
 
+### Logging, Diagnostics & CLI Documentation Requirements
+
+| ID | Category | Requirement Description | Status |
+| :--- | :--- | :--- | :--- |
+| **REQ-021** | Internal Process Logging & Severity Levels | The application shall log internal processes across configuration loading, REST client requests, ViewModel refreshes, and scheduled polling using severity levels: `ERROR` for all errors and exceptions, `INFO` for major lifecycle and operational events (default minimum level), and `DEBUG` for detailed diagnostic information during troubleshooting. | Completed |
+| **REQ-022** | Configurable Console & File Logging | The logging subsystem shall support writing formatted log entries to the console and/or to a configurable file path. Log level (`DEBUG`, `INFO`, `ERROR`), console logging (`EnableConsole`), and file logging (`EnableFile`, `FilePath`) shall be configurable via the `LoggingSettings` section in `secret.json` (and `secret.example.json`) and overrideable via command-line switches (`--log-level`, `--debug`, `--log-file`, `--console-log`, `--no-console-log`). | Completed |
+| **REQ-023** | Execution & Logging Guide (`README.md`) | A root `README.md` file written in English shall document all execution modes, command-line switches, configuration file structure, and instructions for configuring log levels (`ERROR`, `INFO`, `DEBUG`) and console/file outputs. | Completed |
+
 ## Reference API Specification
 
 ### Request

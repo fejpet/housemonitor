@@ -1,4 +1,5 @@
 using HouseMonitor.Core.Configuration;
+using HouseMonitor.Core.Logging;
 using HouseMonitor.Core.Models;
 
 namespace HouseMonitor.Core.Clients;
@@ -12,32 +13,69 @@ public interface IPowerStatusClient
 }
 
 /// <summary>
-/// HTTP REST client that queries the power telemetry endpoint using the configured X-Auth-Key header (REQ-002, REQ-008).
+/// HTTP REST client that queries the power telemetry endpoint using the configured X-Auth-Key header (REQ-002, REQ-008, REQ-021).
 /// </summary>
 public sealed class PowerStatusClient : IPowerStatusClient
 {
     private readonly HttpClient _httpClient;
     private readonly ApiSettings _settings;
+    private readonly IAppLogger _logger;
 
-    public PowerStatusClient(HttpClient httpClient, ApiSettings settings)
+    public PowerStatusClient(
+        HttpClient httpClient,
+        ApiSettings settings,
+        IAppLogger? logger = null)
     {
         ArgumentNullException.ThrowIfNull(httpClient);
         ArgumentNullException.ThrowIfNull(settings);
 
         _httpClient = httpClient;
         _settings = settings;
+        _logger = logger ?? NullAppLogger.Instance;
     }
 
     public async Task<PowerStatus> GetPowerStatusAsync(CancellationToken cancellationToken = default)
     {
-        using var request = new HttpRequestMessage(HttpMethod.Get, _settings.EndpointUrl);
-        request.Headers.Add(_settings.AuthHeaderName, _settings.AuthKey);
+        _logger.LogDebug(
+            nameof(PowerStatusClient),
+            $"Sending HTTP GET request to '{_settings.EndpointUrl}' using header '{_settings.AuthHeaderName}'.");
 
-        using var response = await _httpClient.SendAsync(request, cancellationToken).ConfigureAwait(false);
-        response.EnsureSuccessStatusCode();
+        try
+        {
+            using var request = new HttpRequestMessage(HttpMethod.Get, _settings.EndpointUrl);
+            request.Headers.Add(_settings.AuthHeaderName, _settings.AuthKey);
 
-        var json = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
-        return PowerStatus.FromJson(json);
+            using var response = await _httpClient.SendAsync(request, cancellationToken).ConfigureAwait(false);
+            _logger.LogDebug(
+                nameof(PowerStatusClient),
+                $"Received HTTP response with status code {(int)response.StatusCode} ({response.StatusCode}).");
+
+            response.EnsureSuccessStatusCode();
+
+            var json = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
+            _logger.LogDebug(
+                nameof(PowerStatusClient),
+                $"Read JSON payload ({json.Length} characters). Deserializing PowerStatus.");
+
+            var status = PowerStatus.FromJson(json);
+            _logger.LogInfo(
+                nameof(PowerStatusClient),
+                $"Successfully retrieved power telemetry (Timestamp={status.Timestamp:O}, BatterySoc={status.Battery.Soc}%).");
+
+            return status;
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            _logger.LogDebug(nameof(PowerStatusClient), "Telemetry HTTP request was cancelled.");
+            throw;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(
+                nameof(PowerStatusClient),
+                $"Failed to retrieve or parse power telemetry from '{_settings.EndpointUrl}'.",
+                ex);
+            throw;
+        }
     }
 }
-

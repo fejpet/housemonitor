@@ -2,16 +2,18 @@ using System.ComponentModel;
 using System.Globalization;
 using System.Runtime.CompilerServices;
 using HouseMonitor.Core.Clients;
+using HouseMonitor.Core.Logging;
 using HouseMonitor.Core.Models;
 
 namespace HouseMonitor.Core.Presentation;
 
 /// <summary>
-/// Observable ViewModel for the bottom-right desktop overlay window (REQ-005, REQ-015, REQ-016, REQ-017, REQ-019).
+/// Observable ViewModel for the bottom-right desktop overlay window (REQ-005, REQ-015, REQ-016, REQ-017, REQ-019, REQ-021).
 /// </summary>
 public sealed class OverlayViewModel : INotifyPropertyChanged
 {
     private readonly IPowerStatusClient _client;
+    private readonly IAppLogger _logger;
 
     private PowerStatus? _currentStatus;
     private IReadOnlyList<string> _summaryLines = [];
@@ -23,10 +25,11 @@ public sealed class OverlayViewModel : INotifyPropertyChanged
     private bool _hasError;
     private DateTimeOffset? _lastUpdated;
 
-    public OverlayViewModel(IPowerStatusClient client)
+    public OverlayViewModel(IPowerStatusClient client, IAppLogger? logger = null)
     {
         ArgumentNullException.ThrowIfNull(client);
         _client = client;
+        _logger = logger ?? NullAppLogger.Instance;
     }
 
     public event PropertyChangedEventHandler? PropertyChanged;
@@ -86,10 +89,12 @@ public sealed class OverlayViewModel : INotifyPropertyChanged
     }
 
     /// <summary>
-    /// Fetches the latest telemetry from the REST endpoint and updates observable properties (REQ-016, REQ-017, REQ-019).
+    /// Fetches the latest telemetry from the REST endpoint and updates observable properties (REQ-016, REQ-017, REQ-019, REQ-021).
     /// </summary>
     public async Task RefreshOnceAsync(CancellationToken cancellationToken = default)
     {
+        _logger.LogDebug(nameof(OverlayViewModel), "Starting telemetry refresh.");
+
         try
         {
             var status = await _client.GetPowerStatusAsync(cancellationToken).ConfigureAwait(false);
@@ -105,15 +110,24 @@ public sealed class OverlayViewModel : INotifyPropertyChanged
             LastUpdated = timestamp;
             HasError = false;
             StatusMessage = string.Create(CultureInfo.InvariantCulture, $"Timestamp: {timestamp:yyyy-MM-dd HH:mm:ss}");
+
+            _logger.LogInfo(
+                nameof(OverlayViewModel),
+                string.Create(CultureInfo.InvariantCulture, $"Overlay ViewModel updated with telemetry timestamp {timestamp:yyyy-MM-dd HH:mm:ss}."));
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
+            _logger.LogDebug(nameof(OverlayViewModel), "Telemetry refresh cancelled.");
             throw;
         }
         catch (Exception ex)
         {
             HasError = true;
             StatusMessage = $"Update failed: {ex.Message}";
+            _logger.LogError(
+                nameof(OverlayViewModel),
+                $"Telemetry refresh failed; preserving last known state. Reason: {ex.Message}",
+                ex);
         }
     }
 

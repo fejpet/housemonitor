@@ -2,23 +2,41 @@ using System.Runtime.InteropServices;
 using Avalonia;
 using HouseMonitor.Core.Clients;
 using HouseMonitor.Core.Configuration;
+using HouseMonitor.Core.Logging;
 using HouseMonitor.Core.Presentation;
 
 namespace HouseMonitor.App;
 
 internal static class Program
 {
+    internal static CommandLineOptions CliOptions { get; private set; } = new();
+
     [STAThread]
     public static async Task<int> Main(string[] args)
     {
-        if (args.Contains("--console", StringComparer.OrdinalIgnoreCase))
+        CliOptions = CommandLineOptions.Parse(args);
+
+        if (CliOptions.ShowHelp)
         {
-            var secretPath = SecretConfigurationLoader.ResolveSecretFilePath();
-            var settings = await SecretConfigurationLoader.LoadFromFileAsync(secretPath);
+            Console.WriteLine(CommandLineOptions.GetHelpText());
+            return 0;
+        }
+
+        if (CliOptions.ConsoleMode)
+        {
+            var secretPath = !string.IsNullOrWhiteSpace(CliOptions.SecretFilePathOverride)
+                ? CliOptions.SecretFilePathOverride
+                : SecretConfigurationLoader.ResolveSecretFilePath();
+
+            var config = await SecretConfigurationLoader.LoadConfigurationFromFileAsync(secretPath);
+            var loggingSettings = CliOptions.ApplyOverrides(config.LoggingSettings);
+            using var logger = AppLogger.Create(loggingSettings);
+
+            logger.LogInfo(nameof(Program), $"Starting HouseMonitor in console mode using configuration '{secretPath}'.");
 
             using var httpClient = new HttpClient();
-            var client = new PowerStatusClient(httpClient, settings);
-            var viewModel = new OverlayViewModel(client);
+            var client = new PowerStatusClient(httpClient, config.ApiSettings!, logger);
+            var viewModel = new OverlayViewModel(client, logger);
             await viewModel.RefreshOnceAsync();
 
             foreach (var line in viewModel.SummaryLines)
@@ -27,6 +45,7 @@ internal static class Program
             }
 
             Console.WriteLine(viewModel.StatusMessage);
+            logger.LogInfo(nameof(Program), $"Console mode execution completed (HasError={viewModel.HasError}).");
             return viewModel.HasError ? 1 : 0;
         }
 
