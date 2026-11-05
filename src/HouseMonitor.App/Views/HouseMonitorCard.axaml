@@ -1,0 +1,145 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:HouseMonitor.Core.Presentation"
+             xmlns:conv="using:HouseMonitor.App.Converters"
+             x:Class="HouseMonitor.App.Views.HouseMonitorCard"
+             x:DataType="vm:OverlayViewModel"
+             Width="380">
+
+    <UserControl.Resources>
+        <StreamGeometry x:Key="LightningIcon">M7 2v11h3v9l7-12h-4l4-8z</StreamGeometry>
+        <conv:ActiveSolarBrushAvaloniaConverter x:Key="ActiveSolarBrushConverter"/>
+        <conv:HexToBrushConverter x:Key="HexToBrushConverter"/>
+        <conv:StateToArrowTextConverter x:Key="StateToArrowTextConverter"/>
+        <conv:WattsToDisplayAvaloniaConverter x:Key="WattsToDisplayConverter"/>
+    </UserControl.Resources>
+
+    <Border Background="#0F172A"
+            CornerRadius="12"
+            BorderBrush="#334155"
+            BorderThickness="1"
+            Padding="16"
+            BoxShadow="0 8 24 0 #40000000">
+
+        <StackPanel Spacing="12">
+            <!-- HEADER (REQ-027) -->
+            <Grid ColumnDefinitions="*, Auto">
+                <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                    <PathIcon Data="{StaticResource LightningIcon}"
+                              Foreground="#38BDF8"
+                              Width="14"
+                              Height="14"/>
+                    <TextBlock Text="HOUSE MONITOR"
+                               FontWeight="Bold"
+                               FontSize="13"
+                               Foreground="#38BDF8"
+                               LetterSpacing="1"
+                               VerticalAlignment="Center"/>
+                </StackPanel>
+
+                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                    <Ellipse Width="8"
+                             Height="8"
+                             Fill="{Binding OnlineIndicatorHex, Converter={StaticResource HexToBrushConverter}}"
+                             VerticalAlignment="Center"/>
+                    <TextBlock Text="{Binding HeaderTimeText}"
+                               FontSize="11"
+                               Foreground="#94A3B8"
+                               VerticalAlignment="Center"/>
+                    <Button x:Name="CloseButton"
+                            Content="×"
+                            FontSize="13"
+                            Padding="4,0"
+                            Background="Transparent"
+                            Foreground="#64748B"
+                            VerticalAlignment="Center"/>
+                </StackPanel>
+            </Grid>
+
+            <!-- 2x2 TELEMETRY GRID (REQ-028..REQ-031) -->
+            <Grid ColumnDefinitions="*, *" RowDefinitions="Auto, Auto" Margin="0,2,0,0">
+                <!-- 1. BATTERY CARD (REQ-028) -->
+                <Border Grid.Row="0" Grid.Column="0"
+                        Background="#1E293B" CornerRadius="8" Padding="12" Margin="0,0,4,4"
+                        ClipToBounds="True">
+                    <StackPanel Spacing="6">
+                        <TextBlock Text="BATTERY" FontSize="11" Foreground="#94A3B8" FontWeight="SemiBold"/>
+                        <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Bottom">
+                            <TextBlock Text="{Binding BatteryPercentageDisplayText}"
+                                       FontSize="22" FontWeight="Bold" Foreground="#F8FAFC"/>
+                            <TextBlock Text="{Binding BatteryStatus, Converter={StaticResource StateToArrowTextConverter}}"
+                                       FontSize="11"
+                                       Foreground="{Binding BatteryColorHex, Converter={StaticResource HexToBrushConverter}}"
+                                       VerticalAlignment="Center"/>
+                        </StackPanel>
+                        <ProgressBar Value="{Binding BatteryPercentage}"
+                                     Minimum="0"
+                                     Maximum="100"
+                                     MinWidth="0"
+                                     MinHeight="4"
+                                     Height="6"
+                                     HorizontalAlignment="Stretch"
+                                     Foreground="{Binding BatteryColorHex, Converter={StaticResource HexToBrushConverter}}"
+                                     Background="#334155"
+                                     CornerRadius="3"/>
+                    </StackPanel>
+                </Border>
+
+                <!-- 2. SOLAR CARD (REQ-029) -->
+                <Border Grid.Row="0" Grid.Column="1"
+                        Background="#1E293B" CornerRadius="8" Padding="12" Margin="4,0,0,4">
+                    <StackPanel Spacing="6">
+                        <TextBlock Text="SOLAR" FontSize="11" Foreground="#94A3B8" FontWeight="SemiBold"/>
+                        <TextBlock Text="{Binding SolarPowerWatts, Converter={StaticResource WattsToDisplayConverter}}"
+                                   FontSize="22"
+                                   FontWeight="Bold"
+                                   Foreground="{Binding IsSolarProducing, Converter={StaticResource ActiveSolarBrushConverter}}"/>
+                        <TextBlock Text="{Binding SolarTodayDisplayText}"
+                                   FontSize="11"
+                                   Foreground="#64748B"/>
+                    </StackPanel>
+                </Border>
+
+                <!-- 3. HOUSE CONSUMPTION CARD (REQ-030) -->
+                <Border Grid.Row="1" Grid.Column="0"
+                        Background="#1E293B" CornerRadius="8" Padding="12" Margin="0,4,4,0">
+                    <StackPanel Spacing="6">
+                        <TextBlock Text="HOUSE" FontSize="11" Foreground="#94A3B8" FontWeight="SemiBold"/>
+                        <TextBlock Text="{Binding HousePowerWatts, Converter={StaticResource WattsToDisplayConverter}}"
+                                   FontSize="22"
+                                   FontWeight="Bold"
+                                   Foreground="#38BDF8"/>
+                        <TextBlock Text="{Binding HouseTodayDisplayText}"
+                                   FontSize="11"
+                                   Foreground="#94A3B8"/>
+                    </StackPanel>
+                </Border>
+
+                <!-- 4. GENERATOR CARD (REQ-031) -->
+                <Border Grid.Row="1" Grid.Column="1"
+                        Background="#1E293B" CornerRadius="8" Padding="12" Margin="4,4,0,0">
+                    <StackPanel Spacing="6">
+                        <TextBlock Text="GENERATOR" FontSize="11" Foreground="#94A3B8" FontWeight="SemiBold"/>
+                        <TextBlock Text="{Binding GeneratorStatusDisplayText}"
+                                   FontSize="18"
+                                   FontWeight="Bold"
+                                   Foreground="{Binding GeneratorForegroundHex, Converter={StaticResource HexToBrushConverter}}"/>
+                        <TextBlock Text="{Binding GeneratorTodayDisplayText}"
+                                   FontSize="11"
+                                   Foreground="#64748B"/>
+                    </StackPanel>
+                </Border>
+            </Grid>
+
+            <!-- FOOTER (REQ-032) -->
+            <Border BorderBrush="#1E293B" BorderThickness="0,1,0,0" Padding="0,8,0,2">
+                <TextBlock Text="{Binding FooterTimestampText}"
+                           FontSize="11"
+                           FontFamily="Consolas, Monospace"
+                           Foreground="#64748B"
+                           HorizontalAlignment="Center"
+                           TextTrimming="CharacterEllipsis"/>
+            </Border>
+        </StackPanel>
+    </Border>
+</UserControl>
