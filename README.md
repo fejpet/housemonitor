@@ -6,8 +6,20 @@ HouseMonitor is a cross-platform `.NET 8.0` application that periodically fetche
 
 ## Prerequisites
 
-- [.NET 8.0 SDK](https://dotnet.microsoft.com/download/dotnet/8.0) or later.
+- [.NET 8.0 SDK](https://dotnet.microsoft.com/download/dotnet/8.0) or later (or use the included **VS Code Dev Container**).
 - On Linux / WSL2 (WSLg): an active X11/Wayland display server for the graphical overlay mode (or use `--console` for headless CLI operation).
+
+---
+
+## Development Container (`.devcontainer`)
+
+This repository includes a pre-configured [VS Code Dev Container](.devcontainer/devcontainer.json) based on `.NET 8.0` (`mcr.microsoft.com/devcontainers/dotnet:1-8.0-bookworm`) with `gcc` and all Avalonia X11 runtime libraries pre-installed (`REQ-036`).
+
+### Opening in a Dev Container
+1. Install Docker Desktop (or Docker Engine on Linux/WSL2) and the **Dev Containers** extension (`ms-vscode-remote.remote-containers`) in VS Code.
+2. Open the repository folder in VS Code.
+3. Run **Dev Containers: Reopen in Container** from the Command Palette (`Ctrl+Shift+P` / `Cmd+Shift+P`).
+4. Once the container builds, `dotnet restore` and `dotnet build` run automatically, and you can execute `dotnet test` or `dotnet run --project src/HouseMonitor.App -- --console` directly inside the container terminal.
 
 ---
 

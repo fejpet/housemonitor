@@ -267,6 +267,34 @@ public class AppLoggerAndConfigurationTests
         Assert.Contains("LoggingSettings", content);
     }
 
+    [Fact]
+    public void DevContainerConfiguration_DefinesDotNet8ImageGccAndAvaloniaX11Dependencies()
+    {
+        // Arrange (REQ-036)
+        var repoRoot = SecretConfigurationLoader.ResolveSecretFilePath(
+            AppContext.BaseDirectory,
+            "HouseMonitor.sln");
+        var rootDir = Path.GetDirectoryName(repoRoot)!;
+        var devContainerJsonPath = Path.Combine(rootDir, ".devcontainer", "devcontainer.json");
+        var dockerfilePath = Path.Combine(rootDir, ".devcontainer", "Dockerfile");
+
+        // Act & Assert
+        Assert.True(File.Exists(devContainerJsonPath), $"Expected devcontainer.json at '{devContainerJsonPath}'.");
+        Assert.True(File.Exists(dockerfilePath), $"Expected Dockerfile at '{dockerfilePath}'.");
+
+        var devContainerJson = File.ReadAllText(devContainerJsonPath);
+        var dockerfile = File.ReadAllText(dockerfilePath);
+
+        Assert.Contains("Dockerfile", devContainerJson);
+        Assert.Contains("dotnet", devContainerJson);
+        Assert.Contains("mcr.microsoft.com/devcontainers/dotnet", dockerfile);
+        Assert.Contains("8.0", dockerfile);
+        Assert.Contains("gcc", dockerfile);
+        Assert.Contains("libx11-6", dockerfile);
+        Assert.Contains("libice6", dockerfile);
+        Assert.Contains("libsm6", dockerfile);
+    }
+
     private sealed class FakeHttpMessageHandler(Func<HttpRequestMessage, HttpResponseMessage> responder)
         : HttpMessageHandler
     {

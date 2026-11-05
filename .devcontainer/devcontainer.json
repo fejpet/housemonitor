@@ -1,0 +1,28 @@
+{
+  "name": "HouseMonitor (.NET 8.0 & Avalonia UI)",
+  "build": {
+    "dockerfile": "Dockerfile",
+    "context": ".."
+  },
+  "containerEnv": {
+    "DISPLAY": "${localEnv:DISPLAY}",
+    "DOTNET_CLI_TELEMETRY_OPTOUT": "1",
+    "DOTNET_NOLOGO": "1"
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-dotnettools.csdevkit",
+        "ms-dotnettools.csharp",
+        "AvaloniaTeam.vscode-avalonia",
+        "editorconfig.editorconfig"
+      ],
+      "settings": {
+        "dotnet.defaultSolution": "HouseMonitor.sln",
+        "files.eol": "\n"
+      }
+    }
+  },
+  "postCreateCommand": "dotnet restore HouseMonitor.sln && dotnet build HouseMonitor.sln --no-restore",
+  "remoteUser": "vscode"
+}
